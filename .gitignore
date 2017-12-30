@@ -72,4 +72,6 @@ fastlane/test_output
 *dgph
 *dgph~
 */Objects-normal/*
+*-OutputFileMap.json
+*.LinkFileList
 
