@@ -66,6 +66,14 @@ func md5(_ string: String) -> String {
 }
 */
 
+func printHash(hash:Array<UInt8>) {
+	var hexString = ""
+	for byte in hash {
+		hexString += String(format:"%02x", byte)
+	}
+	print(hexString)
+}
+
 func passwordPart1(inputString: String) -> String {
     var digits = 0
     var i = 0
@@ -81,7 +89,7 @@ func passwordPart1(inputString: String) -> String {
         CC_MD5_Update(context, hashInput, CC_LONG(hashInput.lengthOfBytes(using: String.Encoding.utf8)))
         CC_MD5_Final(&digest, context)
         if (digest[0] == 0) && (digest[1] == 0) && (digest[2] < 16) {
-            print(digest)
+			printHash(hash: digest)
             password += String(format:"%x", digest[2])
             digits += 1
         }
@@ -109,7 +117,7 @@ func passwordPart2(inputString: String) -> String {
         CC_MD5_Final(&digest, context)
         if (digest[0] == 0) && (digest[1] == 0) && (digest[2] < 8) {
             if password[Int(digest[2])].isEmpty {
-                print(digest)
+				printHash(hash: digest)
                 var letters = String(format:"%02x", digest[3])
                 letters.removeLast()
                 password[Int(digest[2])] = letters
@@ -125,5 +133,23 @@ func passwordPart2(inputString: String) -> String {
 }
 
 let inputString = "ugkcyxxp"
+
+let start = DispatchTime.now() // <<<<<<<<<< Start time
+
 print("Part 1 password: " + passwordPart1(inputString: inputString))
+
+let end = DispatchTime.now()   // <<<<<<<<<<   end time
+let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+let timeInterval = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
+print("\nTime to evaluate problem : \(timeInterval) seconds\n")
+
+
+let start2 = DispatchTime.now() // <<<<<<<<<< Start time
+
 print("Part 2 password: " + passwordPart2(inputString: inputString))
+
+let end2 = DispatchTime.now()   // <<<<<<<<<<   end time
+let nanoTime2 = end2.uptimeNanoseconds - start2.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+let timeInterval2 = Double(nanoTime2) / 1_000_000_000 // Technically could overflow for long running tests
+print("\nTime to evaluate problem : \(timeInterval2) seconds\n")
+
