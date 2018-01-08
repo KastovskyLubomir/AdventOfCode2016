@@ -425,6 +425,8 @@ let nanoTime2 = end2.uptimeNanoseconds - start2.uptimeNanoseconds // <<<<< Diffe
 let timeInterval2 = Double(nanoTime2) / 1_000_000_000 // Technically could overflow for long running tests
 print("\nTime to evaluate problem : \(timeInterval2) seconds\n")
 
-
+/*
+ When build as release part 1 takes 8 sec, part2 810 sec.
+ */
 
 
