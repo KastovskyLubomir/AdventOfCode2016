@@ -497,18 +497,15 @@ func breadthFirstSearchParallel(house: House, floorSize: Int, threads: Int) {
 			group.wait()
 
 			for i in 0..<threads {
+				if results[i].found {
+					found = true
+					break
+				}
 				if i != 0 {
 					nodesToProcess.merge(results[i].newNodes, uniquingKeysWith: { (a,b) in return a } )
 				}
 				else {
 					nodesToProcess = results[i].newNodes
-				}
-			}
-
-			for i in 0..<threads {
-				if results[i].found {
-					found = true
-					break
 				}
 			}
 		}
