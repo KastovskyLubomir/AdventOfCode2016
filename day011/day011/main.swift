@@ -248,14 +248,6 @@ func moveColumnDown(row: Int, col: Int, house: House) -> House {
     return res
 }
 
-func floorHasM(floor: UInt64) -> Bool {
-    return (floor & micMask) != 0
-}
-
-func floorHasG(floor: UInt64) -> Bool {
-    return (floor & genMask) != 0
-}
-
 func eachMhasG(floor: UInt64, floorSize: Int) -> Bool {
     var i = 1
     while i < floorSize {
@@ -270,17 +262,13 @@ func eachMhasG(floor: UInt64, floorSize: Int) -> Bool {
 func checkRules(house: House, floorSize: Int) -> Bool {
     for i in minFloor...maxFloor {
         let floor = getFloor(floor: i, house: house)
-        if floorHasM(floor: floor) && floorHasG(floor: floor) {
+        if ((floor & micMask) != 0) && ((floor & genMask) != 0) {
             if !eachMhasG(floor: floor, floorSize: floorSize) {
                 return false
             }
         }
     }
     return true
-}
-
-func removeHouseFromArray(house: House, houseArray: Array<House>) -> Array<House> {
-    return houseArray.filter( { h in return h != house } )
 }
 
 func completed(house: House, completedMask: UInt64) -> Bool {
@@ -358,33 +346,38 @@ func createHouseMoves(house: House, floorSize: Int) -> Array<House> {
 /*
  dictionary with nodes
  key            value
- house(UInt64) : [house(UInt64),house(UInt64)]
+ house(UInt64) : house(UInt64)
  
- this should keep the solutions on one level unique
+ this should keep the solutions on one level unique, and also should prevent going back one step with rememberin the previous variant
+ disadvantage is not possible to recontruct the generation process
+ for recontruction the value must be array, but the memmory requirements raise drasticly
  */
+
+typealias BFSNodes = Dictionary<House,House>
 
 func breadthFirstSearch(house: House, floorSize: Int) {
     var completedMask = elevMask
     for i in 1..<floorSize {
         completedMask = completedMask | maskArray[i]
     }
-    var nodesToProcess = [house:[House]()]
+    var nodesToProcess = [house:House()]
     var found = false
+	var steps = 0
     while !found {
-        print("Nodes in array: " + String(nodesToProcess.first!.value.count) + " Number of arrays: " + String(nodesToProcess.count))
-        var newNodes: Dictionary<House,Array<House>> = [House():[House]()]
+		steps += 1
+		print("Step: " + String(steps) + " Number of arrays: " + String(nodesToProcess.count))
+        var newNodes: BFSNodes = [House():House()]
         for nodeKey in nodesToProcess.keys {
             let moves = createHouseMoves(house: nodeKey, floorSize: floorSize)
             for m in moves {
                 if completed(house: m, completedMask: completedMask) {
                     found = true
-                    print("Solution steps: " + String(nodesToProcess[nodeKey]!.count + 1))
                     break
                 }
-                var nodeArr = nodesToProcess[nodeKey]
-                nodeArr!.append(nodeKey)
-                if !nodeArr!.contains(m) {
-                    newNodes[m] = nodeArr
+                if nodesToProcess[nodeKey]! != m {
+					if newNodes[m] == nil {
+                    	newNodes[m] = nodeKey
+					}
                 }
             }
             if found {
@@ -393,6 +386,7 @@ func breadthFirstSearch(house: House, floorSize: Int) {
         }
         nodesToProcess = newNodes
     }
+	print("Steps to find solution: " + String(steps))
 }
 
 // Part 1
@@ -402,14 +396,14 @@ let inputfloor1 = mic1Mask | mic3Mask
 let inputfloor0 = elevMask | gen1Mask | gen2Mask | mic2Mask | gen3Mask | gen4Mask | mic4Mask | gen5Mask | mic5Mask
 house = setFloor(floor: 0, data: inputfloor0, house: house)
 house = setFloor(floor: 1, data: inputfloor1, house: house)
-
+/*
 let start = DispatchTime.now() // <<<<<<<<<< Start time
 breadthFirstSearch(house: house, floorSize: floorSize1)
 let end = DispatchTime.now()   // <<<<<<<<<<   end time
 let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
 let timeInterval = Double(nanoTime) / 1_000_000_000 // Technically could overflow for long running tests
 print("\nTime to evaluate problem : \(timeInterval) seconds\n")
-
+*/
 // Part 2
 let floorSize2 = 15
 var house2 : House = 0
@@ -417,16 +411,131 @@ let input2floor1 = mic1Mask | mic3Mask
 let input2floor0 = elevMask | gen1Mask | gen2Mask | mic2Mask | gen3Mask | gen4Mask | mic4Mask | gen5Mask | mic5Mask | gen6Mask | mic6Mask | gen7Mask | mic7Mask
 house2 = setFloor(floor: 0, data: input2floor0, house: house2)
 house2 = setFloor(floor: 1, data: input2floor1, house: house2)
-
+/*
 let start2 = DispatchTime.now() // <<<<<<<<<< Start time
 breadthFirstSearch(house: house2, floorSize: floorSize2)
 let end2 = DispatchTime.now()   // <<<<<<<<<<   end time
 let nanoTime2 = end2.uptimeNanoseconds - start2.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
 let timeInterval2 = Double(nanoTime2) / 1_000_000_000 // Technically could overflow for long running tests
 print("\nTime to evaluate problem : \(timeInterval2) seconds\n")
+*/
 
-/*
- When build as release part 1 takes 8 sec, part2 810 sec.
- */
+func generateNewVariants(keyRange: inout Array<House>, nodesToProcess: inout BFSNodes, floorSize: Int, completedMask: UInt64) -> (found: Bool, newNodes: BFSNodes) {
+	var newNodes: BFSNodes = [House():House()]
+	print("Key range size: " + String(keyRange.count) + /*" Nodes in array: " + String(nodesToProcess.first!.value.count) +*/ " Number of arrays: " + String(nodesToProcess.count))
+	var found = false
+	for nodeKey in keyRange {
+		let moves = createHouseMoves(house: nodeKey, floorSize: floorSize)
+		for m in moves {
+			if completed(house: m, completedMask: completedMask) {
+				found = true
+				break
+			}
+			if nodesToProcess[nodeKey]! != m {
+				if newNodes[m] == nil {
+					newNodes[m] = nodeKey
+				}
+			}
+		}
+		if found {
+			break
+		}
+	}
+	return (found, newNodes)
+}
 
+
+func breadthFirstSearchParallel(house: House, floorSize: Int, threads: Int) {
+	var completedMask = elevMask
+	for i in 1..<floorSize {
+		completedMask = completedMask | maskArray[i]
+	}
+
+	var queues = [DispatchQueue]()
+	var results = [(found: Bool, newNodes: BFSNodes)]()
+	for i in 0..<threads {
+		let queue = DispatchQueue(label: String("bfs.") + String(i))
+		queues.append(queue)
+		let result: (found: Bool, newNodes: BFSNodes) = (false, BFSNodes())
+		results.append(result)
+	}
+
+	var keysArr: Array<Array<House>> = [[House]]()
+	var keys: Array<House> = []
+
+	let group = DispatchGroup()
+	var nodesToProcess = [house:House()]
+	var steps = 0
+	var found = false
+	while !found {
+		steps += 1
+		print("Step: " + String(steps) + " Number of arrays: " + String(nodesToProcess.count))
+
+		keysArr = [[House]]()
+		keys = Array(nodesToProcess.keys)
+		if nodesToProcess.count > threads {
+			for i in 0..<threads {
+				let a = (i*(keys.count/threads))
+				var b = 0
+				if i < (threads-1) {
+					b = ((i+1)*(keys.count/threads))
+				}
+				else {
+					b = keys.count
+				}
+				let k = Array(keys[a..<b])
+				keysArr.append(k)
+			}
+
+			for i in 0..<threads {
+				group.enter()
+				queues[i].async(group: group) {
+					results[i] = generateNewVariants(keyRange: &keysArr[i], nodesToProcess: &nodesToProcess, floorSize: floorSize, completedMask: completedMask)
+					group.leave()
+				}
+			}
+			group.wait()
+
+			for i in 0..<threads {
+				if i != 0 {
+					nodesToProcess.merge(results[i].newNodes, uniquingKeysWith: { (a,b) in return a } )
+				}
+				else {
+					nodesToProcess = results[i].newNodes
+				}
+			}
+
+			for i in 0..<threads {
+				if results[i].found {
+					found = true
+					break
+				}
+			}
+		}
+		else {
+			var kk = Array(nodesToProcess.keys)
+			let result = generateNewVariants(keyRange: &kk, nodesToProcess: &nodesToProcess, floorSize: floorSize, completedMask: completedMask)
+			nodesToProcess = result.newNodes
+			if result.found {
+				found = true
+			}
+		}
+	}
+	print("Steps: " + String(steps))
+}
+
+
+let start3 = DispatchTime.now() // <<<<<<<<<< Start time
+breadthFirstSearchParallel(house: house, floorSize: floorSize1, threads: 8)
+let end3 = DispatchTime.now()   // <<<<<<<<<<   end time
+let nanoTime3 = end3.uptimeNanoseconds - start3.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+let timeInterval3 = Double(nanoTime3) / 1_000_000_000 // Technically could overflow for long running tests
+print("\nTime to evaluate problem : \(timeInterval3) seconds\n")
+
+let start4 = DispatchTime.now() // <<<<<<<<<< Start time
+breadthFirstSearchParallel(house: house2, floorSize: floorSize2, threads: 8)
+let end4 = DispatchTime.now()   // <<<<<<<<<<   end time
+let nanoTime4 = end4.uptimeNanoseconds - start4.uptimeNanoseconds // <<<<< Difference in nano seconds (UInt64)
+let timeInterval4 = Double(nanoTime4) / 1_000_000_000 // Technically could overflow for long running tests
+print("\nTime to evaluate problem : \(timeInterval4) seconds\n")
 
