@@ -127,17 +127,12 @@ func passwordConfirm(digest: Array<UInt8>, a: UInt8) -> Bool {
 func keySearch(inputString: String) -> Int {
     var i = 0
     var hashInput = ""
-    
-    let context = UnsafeMutablePointer<CC_MD5_CTX>.allocate(capacity: 1)
     var digest = Array<UInt8>(repeating:0, count:Int(CC_MD5_DIGEST_LENGTH))
-    
     var digestArr = [[UInt8]]()
     
     while i < 1001  {
         hashInput = inputString + String(i)
-        CC_MD5_Init(context)
-        CC_MD5_Update(context, hashInput, CC_LONG(hashInput.lengthOfBytes(using: String.Encoding.utf8)))
-        CC_MD5_Final(&digest, context)
+        CC_MD5(hashInput, CC_LONG(hashInput.lengthOfBytes(using: String.Encoding.utf8)), &digest)
         digestArr.append(digest)
         digest = digest.map({x in return 0})
         i += 1
@@ -172,16 +167,13 @@ func keySearch(inputString: String) -> Int {
         digestArr.removeFirst()
         while digestArr.count < 1001 {
             hashInput = inputString + String(i)
-            CC_MD5_Init(context)
-            CC_MD5_Update(context, hashInput, CC_LONG(hashInput.lengthOfBytes(using: String.Encoding.utf8)))
-            CC_MD5_Final(&digest, context)
+            CC_MD5(hashInput, CC_LONG(hashInput.lengthOfBytes(using: String.Encoding.utf8)), &digest)
             digestArr.append(digest)
             digest = digest.map({x in return 0})
             i += 1
         }
     }
     
-    context.deallocate(capacity: 1)
     return (digestIndex-1)
 }
 
