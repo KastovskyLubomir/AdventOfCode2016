@@ -8,8 +8,6 @@
 
 import Foundation
 
-
-
 var startCount = 3001330
 //var startCount = 5
 
@@ -45,12 +43,31 @@ func stealing(startCount: Int) -> Int {
     return array.index(of: 1)!+1
 }
 
-func indexOfRemoved(array: inout Array<Int>, curentPos: Int) -> Int {
-    var newPos = (curentPos + (array.count/2))
-    if newPos >= array.count {
-        newPos = newPos - array.count
-    }
-    return newPos
+func defrag(array: inout Array<Int>) {
+	print("Defragment")
+	var i = 0
+	var j = 0
+	while i < array.count {
+		if array[i] == -1 {
+			if j == 0 {
+				j = i
+			}
+			while (j < array.count) && (array[j] == -1) {
+				j += 1
+			}
+			if j == array.count {
+				break
+			}
+			print(j)
+			array[i] = array[j]
+			array[j] = -1
+		}
+		i += 1
+		if (i % 100000) == 0 {
+			print(i)
+		}
+	}
+	array.removeSubrange(i..<array.count)
 }
 
 func stealing2(startCount: Int) -> Int {
@@ -61,49 +78,54 @@ func stealing2(startCount: Int) -> Int {
     print(array.count)
     var i = 0
     var removeIndex = 0
+	var removed = 0
     while array.count > 1 {
-        removeIndex =  (i+(array.count/2)) % array.count //indexOfRemoved(array: &array, curentPos: i)
-        array.remove(at: removeIndex)
-        if (i+1) >= array.count {
-            i = (i+1) - array.count
+        removeIndex =  ((i+((array.count-removed)/2)) + removed) % array.count
+        array[removeIndex] = -1
+		removed += 1
+        if removed >= (array.count/2) {
+			defrag(array: &array)
+			removed = 0
         }
-        else {
-            i = i+1
-        }
-        if (array.count % 1000) == 0 {
-            print(array.count)
-        }
+		if (removed % 1000) == 0 {
+			print(removed)
+		}
+		if(removeIndex < i) {
+			i -= 1
+		}
+		i += 1
+		if i == (array.count - removed) {
+			i = 0
+		}
     }
     
-    return array.index(of: 1)!+1
+    return array[0]
 }
 
 func stealing3(startCount: Int) -> Int {
-    var dic = [Int:Int]()
-    for i in 0..<startCount {
-        dic[i] = i+1
-    }
-    print(dic.count)
-    var i = 0
-    var removeIndex = 0
-    while dic.count > 1 {
-        removeIndex =  (i+(dic.count/2)) % dic.count //indexOfRemoved(array: &array, curentPos: i)
-        dic[dic.keys] = nil
-        if (i+1) >= dic.count {
-            i = (i+1) - dic.count
-        }
-        else {
-            i = i+1
-        }
-        if (dic.count % 1000) == 0 {
-            print(dic.count)
-        }
-    }
-    
-    return dic[dic.keys[0]]
+	var array = Array<Int>(repeating: 0, count: startCount)
+	for i in 0..<startCount {
+		array[i] = i+1
+	}
+	print(array.count)
+	var i = 0
+	var removeIndex = 0
+	while array.count > 1 {
+		removeIndex =  (i+(array.count/2)) % array.count
+		//print("r:" + String(array[removeIndex]))
+		array.remove(at: removeIndex)
+		if(removeIndex < i) {
+			i -= 1
+		}
+		i += 1
+		if i == array.count {
+			i = 0
+		}
+	}
+	return array[0]
 }
 
-
-
 //print("Part 1: " + String(stealing(startCount: startCount)))
-print("Part 2: " + String(stealing2(startCount: startCount)))
+print("Part 2: " + String(stealing2(startCount: 10)))
+print("Test: " + String(stealing3(startCount: 10)))
+
