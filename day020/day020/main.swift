@@ -18,7 +18,6 @@ func readLinesRemoveEmpty(str: String) -> Array<String> {
     return x
 }
 
-// input: "1,2,3,4,5"
 func stringNumArrayToArrayOfInt(input:String, separators: CharacterSet) -> Array<Int> {
     var result = [Int]()
     let lenArrStr = input.components(separatedBy: separators)
@@ -42,10 +41,6 @@ let data = fileManager.contents(atPath: filePath)
 let str: String = String(data: data!, encoding: String.Encoding.utf8)!
 
 let inputLines = readLinesRemoveEmpty(str: str)
-
-//let input = Array(inputLines.reduce("", { result, element in return result + element}))
-//let striped = input.filter( { c in !CharacterSet.whitespaces.contains(c.unicodeScalars.first!)} )
-//let compressed = String(striped)
 
 var ranges = [(Int,Int)]()
 for line in inputLines {
@@ -75,7 +70,7 @@ func findFollowingInterval(rightBound: Int, ranges: Array<(Int,Int)>) -> Int {
     return i
 }
 
-func lowestAllowedIP(ranges: Array<(Int, Int)>) -> Int {
+func indexOfLowest(ranges: Array<(Int, Int)>) -> Int {
     var lowestIndex = 0
     var i = 0
     for r in ranges {
@@ -89,7 +84,12 @@ func lowestAllowedIP(ranges: Array<(Int, Int)>) -> Int {
         }
         i += 1
     }
-    
+    return lowestIndex
+}
+
+func lowestAllowedIP(ranges: Array<(Int, Int)>) -> Int {
+    var lowestIndex = indexOfLowest(ranges: ranges)
+    var i = 0
     var rr = ranges
     var w = rr[lowestIndex]
     rr.remove(at: lowestIndex)
@@ -110,4 +110,85 @@ func lowestAllowedIP(ranges: Array<(Int, Int)>) -> Int {
     
 }
 
-print(lowestAllowedIP(ranges: ranges))
+/*
+ a0     b0          a1          b1
+ b0         a0   b1       a1
+ a0 b0     b1       a1
+ b0      a0   a1     b1
+ */
+func isIntersect(a: (Int, Int), b:(Int, Int)) -> Bool {
+    return (((a.0 <= b.0) && (b.0 <= a.1)) || ((a.0 <= b.1) && (b.1 <= a.1)) ||
+        ((a.0<=b.0) && (b.1<=a.1)) || ((b.0<=a.0) && (a.1<=b.1)))
+}
+
+/*
+ a0   a1 b0   b1
+ b0   b1 a0   a1
+ */
+func isConnected(a: (Int, Int), b:(Int, Int)) -> Bool {
+    return (((a.1+1) == b.0) || ((b.1+1) == a.0))
+}
+
+func combine(a: (Int, Int), b:(Int, Int)) -> (Int, Int) {
+    let low = (a.0<=b.0) ? a.0 : b.0
+    let high = (a.1<=b.1) ? b.1 : a.1
+    return (low, high)
+}
+
+func allowedIPCount(ranges: Array<(Int, Int)>) -> Int {
+    var ips = 0
+    var rr = ranges
+    var i = 0
+    while (i < rr.count) {
+        var j = i+1
+        while j < rr.count {
+            if isIntersect(a: rr[i], b: rr[j]) {
+                let q = combine(a: rr[i], b: rr[j])
+                rr.remove(at: j)
+                rr.remove(at: i)
+                rr.append(q)
+                i = -1
+                break
+            }
+            else {
+                if isConnected(a: rr[i], b: rr[j]) {
+                    let q = combine(a: rr[i], b: rr[j])
+                    rr.remove(at: j)
+                    rr.remove(at: i)
+                    rr.append(q)
+                    i = -1
+                    break
+                }
+            }
+            j += 1
+        }
+        i += 1
+    }
+    
+    i = 0
+    while (i < rr.count) {
+        var j = i+1
+        var lowest = i
+        while (j < rr.count) {
+            if rr[j].0 < rr[lowest].0 {
+                lowest = j
+            }
+            j += 1
+        }
+        let x = rr[i]
+        rr[i] = rr[lowest]
+        rr[lowest] = x
+        i += 1
+    }
+    
+    for k in 0..<rr.count-1 {
+        ips += (rr[k+1].0) - (rr[k].1+1)
+    }
+    
+    return ips
+}
+
+print("Part 1: " + String(lowestAllowedIP(ranges: ranges)))
+print("Part 2: " + String(allowedIPCount(ranges: ranges)))
+
+
